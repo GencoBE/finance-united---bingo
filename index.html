@@ -1,0 +1,543 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Finance United — Bingo (Lock & Admin)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+<!-- XLSX parser for .xlsx admin uploads (online). If offline, CSV still works. -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  :root{ --brand:#7A0019; --bg:#ffffff; --fg:#0f1c2b; --line:#e5e7eb; --ok:#0f9950; --warn:#a14f00; --err:#b00020; }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);font-family:'Nunito','Segoe UI',Arial,sans-serif}
+  main{max-width:980px;margin:18px auto;padding:0 12px 42px}
+
+  /* Floating Admin pill */
+  .admin-pill{position:fixed;top:10px;right:10px;z-index:60;background:#fff;color:var(--fg);border:1px solid var(--line);border-radius:999px;padding:8px 12px;font-weight:800;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.12)}
+  .admin-pill:hover{background:var(--brand);color:#fff;border-color:var(--brand)}
+
+  /* Overlays */
+  .overlay{position:fixed;inset:0;background:rgba(122,0,25,0.97);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:20px;z-index:50}
+  .hidden{display:none}
+  .panel{max-width:760px;width:min(92%,760px);background:#fff;color:var(--fg);border-radius:16px;padding:18px 16px;box-shadow:0 12px 28px rgba(0,0,0,.25)}
+  .panel h2{margin:0 0 8px 0;font-size:1.25rem}
+  .panel p{margin:0 0 12px 0;color:#425466;line-height:1.35}
+  .panel input[type=text], .panel input[type=password], .panel input[type=file]{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;font-size:1rem;background:#fff}
+  .btn{appearance:none;border:1px solid transparent;border-radius:12px;padding:12px 16px;font-weight:800;font-size:1rem;cursor:pointer}
+  .btn.primary{background:var(--brand);color:#fff}
+  .btn.ghost{background:transparent;border-color:#fff;color:#fff}
+  .btn.neutral{background:#fff;border:1px solid var(--line);color:var(--fg)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+
+  /* Countdown */
+  .count{font-size:6rem;font-weight:900;letter-spacing:.05em}
+
+  /* 3×3 grid */
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .cell{background:#fff;border:1px solid var(--line);border-radius:12px;min-height:150px;padding:12px;display:flex;flex-direction:column}
+  .q{font-weight:800;margin-bottom:8px;font-size:1rem;line-height:1.3rem}
+  textarea{width:100%;min-height:78px;resize:vertical;padding:8px;border-radius:8px;border:1px dashed var(--line);font-size:.95rem}
+  textarea:disabled{background:#f6f7f9;color:#55657a}
+
+  .hint{margin-top:12px;font-size:.92rem;color:#41566f}
+  .section-title{font-size:1.15rem;font-weight:900;margin:4px 0 8px}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .stat{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--line);border-radius:999px;background:#fff}
+  .note{font-size:.92rem;color:#3f5368}
+  .status-ok{color:var(--ok);font-weight:800}
+  .status-warn{color:var(--warn);font-weight:800}
+  .status-err{color:var(--err);font-weight:800}
+  hr{border:none;border-top:1px solid var(--line);margin:12px 0}
+
+  /* Lock bar */
+  .lockBar{margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .toast{padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:#fff}
+  .toast.ok{border-color:rgba(15,153,80,.4)}
+  .toast.err{border-color:rgba(176,0,32,.4)}
+
+  /* LOCKED banner */
+  .locked-banner{
+    background: var(--brand);
+    color: #fff;
+    font-weight: 900;
+    font-size: 1.55rem;
+    text-align: center;
+    padding: 14px 16px;
+    border-radius: 14px;
+    margin: 10px 0 14px;
+    letter-spacing: 0.08em;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+  }
+
+  /* Admin overlay specific */
+  #adminOverlay .panel{max-width:860px;width:min(96%,860px)}
+</style>
+</head>
+<body>
+
+  <!-- Floating admin entry -->
+  <div class="admin-pill" id="adminEntry">Admin</div>
+
+  <!-- Participant Flow Overlays -->
+  <div class="overlay" id="startOverlay">
+    <button class="btn ghost" id="startBtn">Tap to start</button>
+  </div>
+
+  <div class="overlay hidden" id="nameOverlay">
+    <div class="panel" style="max-width:560px">
+      <h2>Welcome!</h2>
+      <p>Please enter your name (max 50 characters). We’ll personalise your card.</p>
+      <input id="playerName" type="text" maxlength="50" placeholder="Type your name" autocomplete="name" />
+      <div style="height:10px"></div>
+      <button id="goBtn" class="btn primary" disabled>Let’s create your Bingo card!</button>
+    </div>
+  </div>
+
+  <div class="overlay hidden" id="countOverlay">
+    <div class="count" id="countNum">3</div>
+    <div class="count-sub">Get ready…</div>
+  </div>
+
+  <!-- Admin login overlay (passcode) -->
+  <div class="overlay hidden" id="adminLogin">
+    <div class="panel" style="max-width:520px">
+      <h2>Admin access</h2>
+      <p>Enter the admin passcode to continue.</p>
+      <input id="adminPass" type="password" placeholder="Passcode" />
+      <div style="height:10px"></div>
+      <div class="row" style="justify-content:space-between">
+        <button class="btn neutral" id="adminCancel">Cancel</button>
+        <button class="btn primary" id="adminOk">Enter admin</button>
+      </div>
+      <div class="note" id="adminErr" style="margin-top:10px;display:none"><span class="status-err">Wrong passcode.</span></div>
+    </div>
+  </div>
+
+  <!-- Admin overlay/page -->
+  <div class="overlay hidden" id="adminOverlay">
+    <div class="panel">
+      <div class="row" style="justify-content:space-between">
+        <h2 style="margin:0">Admin — Question Bank Upload</h2>
+        <button class="btn neutral" id="closeAdmin">Close</button>
+      </div>
+
+      <p class="note">Upload an <b>Excel (.xlsx)</b> or <b>CSV</b> file with three columns:<br>
+      <b>Column A</b> = Order (reference only), <b>Column B</b> = Question, <b>Column C</b> = Action Point.<br>
+      Row 1 is header; data starts at row 2. The first two data rows become <b>fixed squares</b> on every card; the rest are randomized (2 fixed + 7 random = 9).</p>
+
+      <div class="row">
+        <input type="file" id="fileInput" accept=".xlsx,.csv" />
+        <button class="btn primary" id="parseBtn" disabled>Parse & Save</button>
+        <button class="btn neutral" id="resetBtn">Reset to built‑in</button>
+      </div>
+
+      <div class="row" style="margin-top:10px">
+        <span class="stat" id="statCount">Loaded: 0 items</span>
+        <span class="stat" id="statFixed">Fixed first two: (none)</span>
+        <span class="stat" id="statStatus">Status: waiting for upload</span>
+      </div>
+
+      <hr>
+      <h2 style="margin:0 0 8px 0;font-size:1.15rem">Admin passcode</h2>
+      <p class="note">This passcode is used for both <b>Admin page access</b> and <b>Unlock (Admin only)</b> on participant phones. Stored locally in this browser.</p>
+      <div class="row">
+        <input id="newPass" type="password" placeholder="Set new passcode (min 4 chars)" style="flex:1;min-width:220px" />
+        <button class="btn primary" id="setPassBtn">Update passcode</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Unlock overlay on participant device -->
+  <div class="overlay hidden" id="unlockOverlay">
+    <div class="panel" style="max-width:520px">
+      <h2>Unlock card (Admin only)</h2>
+      <p>Ask an organiser/admin to enter the passcode to unlock this card.</p>
+      <input id="unlockPass" type="password" placeholder="Admin passcode" />
+      <div style="height:10px"></div>
+      <div class="row" style="justify-content:space-between">
+        <button class="btn neutral" id="unlockCancel">Cancel</button>
+        <button class="btn primary" id="unlockOk">Unlock</button>
+      </div>
+      <div class="note" id="unlockErr" style="margin-top:10px;display:none"><span class="status-err">Wrong passcode.</span></div>
+    </div>
+  </div>
+
+  <main>
+    <section id="participantUI">
+      <div class="section-title">Your 3×3 Networking Bingo</div>
+
+      <!-- LOCKED BANNER -->
+      <div id="lockedBanner" class="locked-banner" style="display:none">🔒 CARD LOCKED · <span id="lockedTime"></span></div>
+
+      <section id="grid" class="grid"></section>
+
+      <div class="lockBar">
+        <button id="lockBtn" class="btn primary" disabled>Lock my card ✅</button>
+        <button id="unlockBtn" class="btn neutral" style="display:none">Unlock (Admin only)</button>
+        <div id="lockMsg" class="toast" style="display:none"></div>
+      </div>
+
+      <p class="hint">Locking freezes your answers on this phone. To unlock, an admin must enter the passcode. Lock status survives refresh & phone sleep.</p>
+    </section>
+  </main>
+
+<script>
+  // --------------------- Built-in fallback questions (100) ---------------------
+  const BUILTIN = [
+    "Meet someone from APMEA","Meet someone from Europe (not your own country)","Meet someone from LATAM","Meet someone from North America",
+    "Meet someone who has lived in 3+ countries","Meet someone who speaks 4+ languages","Meet someone who relocated for Puratos","Meet someone who has visited Belgium 5+ times",
+    "Meet someone who is in Belgium for the first time","Meet someone who worked on a cross‑region project","Meet someone who can cook a signature dish from their home",
+    "Meet someone who has travelled to 30+ countries","Learn a word in their language (write it)","Meet someone who worked in both HQ and country roles",
+    "Meet someone who has worked in 3 Puratos entities","Ask someone to describe their country in one funny sentence","Meet someone who has visited your country",
+    "Meet someone who worked with a distributor abroad","Meet someone who loves Belgian chocolate the most","Discover a surprising tradition from someone’s country",
+    "Find someone who joined Puratos within the last year","Find someone who has worked at Puratos for over 20 years","Find someone who changed function (e.g., Sales → Finance)",
+    "Find someone who started their career outside Finance","Find someone who did more than 10 year‑end closings","Find someone who worked in both local and regional finance",
+    "Find someone who worked in Sales & Customers","Find someone who attended a previous Finance United","Find someone who created a KPI dashboard",
+    "Find someone who trained colleagues on a finance topic","Find someone who has used SAP for 10+ years","Find someone who led a cross‑functional project",
+    "Find someone who survived a crazy budget season","Find someone who worked on a pricing project","Find someone who contributed to Working Capital improvement",
+    "Find someone who plays the piano","Find someone who can sing","Find someone who paints or draws","Find someone who plays a sport competitively",
+    "Find someone who has completed a marathon","Find someone who can juggle","Find someone who can do a yoga pose or handstand","Find someone who loves photography",
+    "Find someone who can dance a traditional dance","Find someone who plays an uncommon instrument","Find someone who is a great cook","Find someone who has a blog or a podcast",
+    "Find someone who is a certified coach or trainer","Find someone who speaks Spanish","Find someone who can whistle loudly",
+    "Find someone who prefers mornings","Find someone who prefers evenings","Find someone who loves spreadsheets","Find someone who dislikes spreadsheets (but uses them)",
+    "Find someone who color‑codes their inbox","Find someone who drinks 4+ coffees per day","Find someone who keeps a perfectly organised desk","Find someone who works best under pressure",
+    "Find someone who loves PowerPoint","Find someone who dislikes meetings longer than 1 hour","Find someone who enjoys mentoring younger colleagues",
+    "Find someone who prefers hybrid work","Find someone who reads business books","Find someone who is always early to meetings","Find someone who uses too many Teams emojis 😄",
+    "Find someone who has a pet","Find someone who has a tattoo","Find someone who can recommend a great TV series","Find someone who loves spicy food",
+    "Find someone who doesn’t drink coffee","Find someone who collects something unusual","Find someone who has run a half‑marathon or trail run","Find someone who has met a celebrity",
+    "Find someone who plays video games","Find someone who is afraid of heights","Find someone who prefers beach holidays","Find someone who prefers mountain holidays",
+    "Find someone who likes Lego","Find someone who went to a concert in the last month","Find someone with a funny work‑from‑home story",
+    "Find someone who can tell a joke in 10 seconds","Find someone who likes baking (e.g., sourdough)","Find someone who is wearing something red",
+    "Find someone who has the same favourite city as you",
+    "Find someone who can show their funniest phone photo (SFW)","Find someone who can make an animal sound on request","Find someone who has a secret party trick",
+    "Find someone who has taken a spontaneous last‑minute trip","Find someone who laughs loudly at their own jokes","Find someone who has a guilty‑pleasure snack",
+    "Find someone who tried an extreme sport once","Find someone who loves karaoke","Find someone who has a hilarious travel story",
+    "Find someone who has an unusual fear","Find someone who can imitate a movie quote","Find someone who has a funny childhood nickname",
+    "Find someone who always gets lost in new cities","Find someone who dances when nobody is watching","Find someone who can describe themselves in three funny words"
+  ];
+
+  // --------------------- Keys ---------------------
+  const LS_BANK_KEY  = 'FU_BINGO_BANK_V1';
+  const LS_STATE_KEY = 'FU_BINGO_3x3_STATE';
+  const LS_PASS_KEY  = 'FU_BINGO_ADMIN_PASS';
+  const DEFAULT_ADMIN_PASS = 'FU2026';
+
+  const $ = (sel)=>document.querySelector(sel);
+
+  function getAdminPass(){
+    try{ return localStorage.getItem(LS_PASS_KEY) || DEFAULT_ADMIN_PASS; }catch(e){ return DEFAULT_ADMIN_PASS; }
+  }
+  function setAdminPass(p){
+    try{ localStorage.setItem(LS_PASS_KEY, p); }catch(e){}
+  }
+
+  // Bank schema: [{order:number, q:string, action:string}]
+  function loadBank(){
+    try{
+      const raw = localStorage.getItem(LS_BANK_KEY);
+      if(!raw) return BUILTIN.map((q,idx)=>({order: idx+1, q, action:''}));
+      const arr = JSON.parse(raw);
+      if(Array.isArray(arr) && arr.length>0) return arr;
+      return BUILTIN.map((q,idx)=>({order: idx+1, q, action:''}));
+    }catch(e){
+      return BUILTIN.map((q,idx)=>({order: idx+1, q, action:''}));
+    }
+  }
+  function saveBank(arr){
+    try{ localStorage.setItem(LS_BANK_KEY, JSON.stringify(arr)); }catch(e){}
+  }
+
+  // 2 fixed + 7 random
+  function pick9FromBank(bank){
+    const data = (Array.isArray(bank)?bank:[]).filter(x=>x && x.q && String(x.q).trim().length>0);
+    if(data.length<2) return pick9FromBank(BUILTIN.map((q,idx)=>({order: idx+1, q, action:''})));
+    data.sort((a,b)=>(Number(a.order)||0)-(Number(b.order)||0));
+    const fixed = [data[0], data[1]];
+    const rest = data.slice(2);
+    const idx = rest.map((_,i)=>i);
+    for(let i=idx.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [idx[i],idx[j]]=[idx[j],idx[i]]; }
+    const chosen = idx.slice(0,7).map(i=>rest[i]);
+    return fixed.concat(chosen).slice(0,9);
+  }
+
+  // --------------------- Participant state ---------------------
+  const state = { name:'', ids:[], answers:{}, locked:false, lockedAt:'' };
+
+  function saveState(){ try{ localStorage.setItem(LS_STATE_KEY, JSON.stringify(state)); }catch(e){} }
+  function loadState(){
+    try{ const raw = localStorage.getItem(LS_STATE_KEY); if(raw){ const s=JSON.parse(raw); if(s && typeof s==='object'){ Object.assign(state, s); } } }catch(e){}
+  }
+
+  function toast(kind, msg){
+    const el = $('#lockMsg');
+    el.style.display='block';
+    el.className = 'toast ' + (kind==='ok'?'ok':'err');
+    el.textContent = msg;
+  }
+
+  function updateLockUI(){
+    const lockBtn = $('#lockBtn');
+    const unlockBtn = $('#unlockBtn');
+    const banner = $('#lockedBanner');
+    const timeEl = $('#lockedTime');
+
+    if(!state.ids || state.ids.length!==9){
+      lockBtn.disabled = true;
+      unlockBtn.style.display='none';
+      banner.style.display='none';
+      return;
+    }
+
+    if(state.locked){
+      lockBtn.style.display='none';
+      unlockBtn.style.display='inline-block';
+      lockBtn.disabled = true;
+
+      if(state.lockedAt){
+        const d = new Date(state.lockedAt);
+        timeEl.textContent = d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+      } else {
+        timeEl.textContent = '';
+      }
+      banner.style.display='block';
+
+    } else {
+      lockBtn.style.display='inline-block';
+      unlockBtn.style.display='none';
+      lockBtn.disabled = false;
+      banner.style.display='none';
+    }
+  }
+
+  function renderGrid(){
+    const wrap = $('#grid'); wrap.innerHTML='';
+    state.ids.forEach((item,i)=>{
+      const cell=document.createElement('div'); cell.className='cell';
+      const q=document.createElement('div'); q.className='q';
+      const text = item.q + (item.action? ` — ${item.action}`:'');
+      q.textContent = (i+1)+'. '+text;
+      const ta=document.createElement('textarea');
+      ta.placeholder='Type name/answer…';
+      ta.value = state.answers[item.order] || '';
+      ta.disabled = !!state.locked;
+      ta.oninput = ()=>{ state.answers[item.order]=ta.value; saveState(); };
+      cell.appendChild(q); cell.appendChild(ta);
+      wrap.appendChild(cell);
+    });
+    updateLockUI();
+  }
+
+  function generateCard(){
+    const bank = loadBank();
+    state.ids = pick9FromBank(bank);
+    state.answers = {};
+    state.locked = false;
+    state.lockedAt = '';
+    saveState();
+    renderGrid();
+  }
+
+  function lockCard(){
+    state.locked = true;
+    state.lockedAt = new Date().toISOString();
+    saveState();
+    renderGrid();
+    toast('ok','✅ Locked! Your card is frozen on this phone.');
+  }
+
+  function showUnlock(){
+    $('#unlockPass').value='';
+    $('#unlockErr').style.display='none';
+    $('#unlockOverlay').classList.remove('hidden');
+    $('#unlockPass').focus();
+  }
+
+  function unlockCard(){
+    const entered = ($('#unlockPass').value||'');
+    if(entered === getAdminPass()){
+      state.locked = false;
+      state.lockedAt = '';
+      saveState();
+      $('#unlockOverlay').classList.add('hidden');
+      renderGrid();
+      toast('ok','Unlocked. You can edit again.');
+    } else {
+      $('#unlockErr').style.display='block';
+    }
+  }
+
+  // --------------------- Participant flow overlays ---------------------
+  const startOverlay = $('#startOverlay');
+  const nameOverlay  = $('#nameOverlay');
+  const countOverlay = $('#countOverlay');
+
+  // ALWAYS ask name + countdown (even after refresh)
+  function showStartFlow(){
+    $('#lockedBanner').style.display='none';
+    $('#grid').innerHTML='';
+    $('#lockMsg').style.display='none';
+    startOverlay.classList.remove('hidden');
+    nameOverlay.classList.add('hidden');
+    countOverlay.classList.add('hidden');
+  }
+
+  $('#startBtn').onclick = ()=>{
+    startOverlay.classList.add('hidden');
+    nameOverlay.classList.remove('hidden');
+    $('#playerName').value='';
+    $('#goBtn').disabled=true;
+    $('#goBtn').textContent='Let’s create your Bingo card!';
+    $('#playerName').focus();
+  };
+
+  const nameInput = $('#playerName');
+  const goBtn = $('#goBtn');
+
+  nameInput.addEventListener('input', ()=>{
+    const val = nameInput.value.trim().slice(0,50);
+    nameInput.value = val;
+    goBtn.disabled = !val.length;
+    goBtn.textContent = val? `${val}, let’s create your Bingo card!` : `Let’s create your Bingo card!`;
+  });
+
+  goBtn.onclick = ()=>{
+    state.name = nameInput.value.trim().slice(0,50);
+    saveState();
+    nameOverlay.classList.add('hidden');
+    let n=3; const num=$('#countNum'); num.textContent=n; countOverlay.classList.remove('hidden');
+    const timer=setInterval(()=>{ n--; if(n>0){ num.textContent=n; } else { clearInterval(timer); countOverlay.classList.add('hidden'); generateCard(); window.scrollTo({top:0,behavior:'smooth'}); } }, 1000);
+  };
+
+  $('#lockBtn').addEventListener('click', lockCard);
+  $('#unlockBtn').addEventListener('click', showUnlock);
+  $('#unlockCancel').addEventListener('click', ()=>$('#unlockOverlay').classList.add('hidden'));
+  $('#unlockOk').addEventListener('click', unlockCard);
+
+  // --------------------- Admin access (passcode protected) ---------------------
+  $('#adminEntry').onclick = ()=>{
+    $('#adminPass').value='';
+    $('#adminErr').style.display='none';
+    $('#adminLogin').classList.remove('hidden');
+    $('#adminPass').focus();
+  };
+  $('#adminCancel').onclick = ()=>$('#adminLogin').classList.add('hidden');
+  $('#adminOk').onclick = ()=>{
+    const entered = ($('#adminPass').value||'');
+    if(entered === getAdminPass()){
+      $('#adminLogin').classList.add('hidden');
+      $('#adminOverlay').classList.remove('hidden');
+    } else {
+      $('#adminErr').style.display='block';
+    }
+  };
+  $('#closeAdmin').onclick = ()=>$('#adminOverlay').classList.add('hidden');
+
+  // Admin: upload & parse
+  const fileInput = $('#fileInput');
+  const parseBtn  = $('#parseBtn');
+  const statCount = $('#statCount');
+  const statFixed = $('#statFixed');
+  const statStatus= $('#statStatus');
+
+  function refreshAdminStats(bank){
+    const data = (Array.isArray(bank)?bank:[]).filter(x=>x && x.q);
+    statCount.textContent = 'Loaded: ' + data.length + ' items';
+    if(data.length>=2){
+      data.sort((a,b)=>(Number(a.order)||0)-(Number(b.order)||0));
+      statFixed.textContent = 'Fixed first two: ' + data[0].q.slice(0,40) + ' / ' + data[1].q.slice(0,40);
+    } else {
+      statFixed.textContent = 'Fixed first two: (none)';
+    }
+  }
+
+  fileInput.addEventListener('change', ()=>{ parseBtn.disabled = !(fileInput.files && fileInput.files.length); statStatus.textContent='Status: file selected'; });
+
+  function parseCSV(text){
+    const rows = text.split(/\r?\n/).filter(r=>r.trim().length>0).map(r=>r.split(','));
+    const out = [];
+    for(let i=1;i<rows.length;i++){
+      const r = rows[i];
+      if(!r || r.length<2) continue;
+      const order = Number(r[0]) || i;
+      const q = String(r[1]||'').trim();
+      const action = String(r[2]||'').trim();
+      if(q) out.push({order,q,action});
+    }
+    return out;
+  }
+
+  async function handleParse(){
+    const f = fileInput.files && fileInput.files[0];
+    if(!f){ statStatus.textContent='Status: no file'; return; }
+    const name = f.name.toLowerCase();
+    let parsed = [];
+    try{
+      if(name.endsWith('.csv')){
+        parsed = parseCSV(await f.text());
+      } else if(name.endsWith('.xlsx')){
+        if(typeof XLSX === 'undefined'){ alert('XLSX library not available. Please connect to the internet or upload CSV.'); return; }
+        const buf = await f.arrayBuffer();
+        const wb = XLSX.read(buf, {type:'array'});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const json = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+        for(let i=1;i<json.length;i++){
+          const r = json[i]; if(!r) continue;
+          const order = Number(r[0]) || i;
+          const q = String(r[1]||'').trim();
+          const action = String(r[2]||'').trim();
+          if(q) parsed.push({order,q,action});
+        }
+      } else {
+        alert('Unsupported file type. Please upload .xlsx or .csv'); return;
+      }
+
+      if(parsed.length < 2){
+        alert('Please provide at least two data rows (the first two will be fixed squares).');
+        return;
+      }
+
+      parsed.sort((a,b)=>(Number(a.order)||0)-(Number(b.order)||0));
+      saveBank(parsed);
+      refreshAdminStats(parsed);
+      statStatus.textContent='Status: saved (this browser)';
+      alert('Saved! Note: this bank is stored in this browser. Participants will use the bank only if they open the same hosted page (recommended).');
+
+    }catch(err){
+      console.error(err);
+      alert('Parsing failed. Please check the file and try again.');
+    }
+  }
+
+  parseBtn.addEventListener('click', handleParse);
+
+  $('#resetBtn').addEventListener('click', ()=>{
+    const bank = BUILTIN.map((q,idx)=>({order: idx+1, q, action:''}));
+    saveBank(bank);
+    refreshAdminStats(bank);
+    statStatus.textContent='Status: reset to built‑in';
+  });
+
+  // Admin: update passcode
+  $('#setPassBtn').addEventListener('click', ()=>{
+    const p = ($('#newPass').value||'').trim();
+    if(p.length < 4){ alert('Passcode too short (min 4 characters).'); return; }
+    setAdminPass(p);
+    $('#newPass').value='';
+    alert('Passcode updated on this admin browser.');
+  });
+
+  // --------------------- Init ---------------------
+  loadState();
+  refreshAdminStats(loadBank());
+
+  // Always start with the Start->Name->Countdown flow
+  showStartFlow();
+
+</script>
+</body>
+</html>

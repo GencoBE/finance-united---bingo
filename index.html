@@ -1,81 +1,81 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Finance United – Bingo</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
 
 <style>
-:root{
+:root {
   --brand:#7A0019;
   --fg:#0f1c2b;
   --line:#e5e7eb;
   --bg:#ffffff;
 }
-*{box-sizing:border-box}
 
-body{
+* { box-sizing:border-box; }
+
+body {
   margin:0;
   font-family:'Nunito', Arial, sans-serif;
   background:var(--bg);
   color:var(--fg);
 }
 
-main{
-  max-width:980px;
-  margin:14px auto;
-  padding:0 14px 44px;
+main {
+  max-width:960px;
+  margin:20px auto;
+  padding:0 16px 40px;
 }
 
-.welcome{
-  font-size:1.35rem;
+.welcome {
+  font-size:1.4rem;
   font-weight:900;
   color:var(--brand);
+  margin-bottom:10px;
 }
 
-.grid{
+.grid {
   display:grid;
   grid-template-columns:repeat(3,1fr);
-  gap:10px;
+  gap:12px;
 }
 
-.cell{
+.cell {
   border:1px solid var(--line);
   border-radius:12px;
   padding:12px;
-  min-height:150px;
   background:#fff;
+  min-height:150px;
 }
 
-.q{
+.q {
   font-weight:900;
   margin-bottom:10px;
 }
 
-/* ✅ Mobile Solution 1 */
-input.answer{
+input.answer {
   width:100%;
   padding:8px;
+  font-size:1rem;
   border-radius:10px;
   border:1px dashed var(--line);
-  font-size:1rem;
   text-align:left;
 }
 
-input.answer:disabled{
+input.answer:disabled {
   background:#f6f7f9;
 }
 
-.actions{
-  margin-top:14px;
+.actions {
+  margin-top:16px;
   display:flex;
   gap:10px;
-  flex-wrap:wrap;
 }
 
-button{
+button {
   padding:12px 16px;
   border-radius:12px;
   font-weight:900;
@@ -83,10 +83,17 @@ button{
   cursor:pointer;
 }
 
-.primary{ background:var(--brand); color:#fff; }
-.secondary{ background:#fff; border:1px solid var(--line); }
+.primary {
+  background:var(--brand);
+  color:#fff;
+}
 
-.locked-banner{
+.secondary {
+  background:#fff;
+  border:1px solid var(--line);
+}
+
+.locked-banner {
   background:var(--brand);
   color:#fff;
   font-weight:900;
@@ -96,112 +103,104 @@ button{
   margin:10px 0;
 }
 
-.overlay{
+.overlay {
   position:fixed;
   inset:0;
-  background:rgba(122,0,25,.97);
+  background:rgba(122,0,25,.95);
   display:flex;
   align-items:center;
   justify-content:center;
   z-index:1000;
 }
 
-.panel{
+.panel {
   background:#fff;
-  padding:22px;
   border-radius:16px;
+  padding:24px;
   max-width:420px;
   width:100%;
   text-align:center;
 }
 
-.hidden{ display:none; }
-.count{ font-size:5rem; font-weight:900; color:#fff; }
+.hidden { display:none; }
+
+.count {
+  font-size:5rem;
+  font-weight:900;
+  color:#fff;
+}
 </style>
 </head>
 
 <body>
 
-<!-- INTRO -->
-<div id="introOverlay" class="overlay">
-  <button id="tapStartBtn" class="primary">Tap to start</button>
+<div id="intro" class="overlay">
+  <button id="startBtn" class="primary">Tap to start</button>
 </div>
 
-<!-- NAME -->
-<div id="nameOverlay" class="overlay hidden">
+<div id="nameBox" class="overlay hidden">
   <div class="panel">
     <h2>Welcome to the Bingo Game!</h2>
     <p>Please enter your name.</p>
-    <input id="participantName" />
+    <input id="playerName">
     <br><br>
-    <button id="continueBtn" class="primary">Continue</button>
+    <button id="nameOk" class="primary">Continue</button>
   </div>
 </div>
 
-<!-- COUNTDOWN -->
-<div id="countOverlay" class="overlay hidden">
-  <div id="countNum" class="count">3</div>
+<div id="countdown" class="overlay hidden">
+  <div id="count" class="count">3</div>
 </div>
 
 <main>
-  <div class="welcome">Welcome, <span id="welcomeName"></span></div>
+  <div class="welcome">Welcome, <span id="hello"></span></div>
 
-  <div id="lockedBanner" class="locked-banner hidden">
-    🔒 CARD LOCKED · <span id="lockedTime"></span>
+  <div id="locked" class="locked-banner hidden">
+    🔒 CARD LOCKED · <span id="time"></span>
   </div>
 
   <div id="grid" class="grid"></div>
 
   <div class="actions">
-    <button id="lockBtn" class="primary" disabled>Lock my card ✅</button>
-    <button id="adminBtn" class="secondary hidden">Admin for Unlock</button>
+    <button id="lock" class="primary" disabled>Lock my card ✅</button>
+    <button id="admin" class="secondary hidden">Admin for Unlock</button>
   </div>
 </main>
 
 <script>
 const ADMIN = "FU2026";
-const STORAGE_KEY = "FU_BINGO_FINAL";
+const STORAGE = "FU_BINGO_OK";
 
-/* STATE */
 let state = {
   name:"",
   questions:[],
   answers:Array(9).fill(""),
   locked:false,
-  lockedAt:""
+  time:""
 };
 
 const $ = id => document.getElementById(id);
 
-function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
-function load(){
-  const s = localStorage.getItem(STORAGE_KEY);
-  if(s) state = JSON.parse(s);
-}
-function timeFmt(t){
+function save(){ localStorage.setItem(STORAGE,JSON.stringify(state)); }
+function load(){ const s=localStorage.getItem(STORAGE); if(s) state=JSON.parse(s); }
+
+function formatTime(t){
   return new Date(t).toLocaleTimeString([],{
-    hour:'2-digit', minute:'2-digit', second:'2-digit'
+    hour:'2-digit',minute:'2-digit',second:'2-digit'
   });
 }
 
-/* LOAD QUESTIONS FROM questions.txt */
 async function loadQuestions(){
   const r = await fetch("questions.txt",{cache:"no-store"});
   const t = await r.text();
   return t.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
 }
 
-function pickQuestions(all){
-  const first5 = all.slice(0,5);
-  const rest = all.slice(5).sort(()=>Math.random()-0.5);
-  const must = first5[Math.floor(Math.random()*first5.length)];
+function pick(q){
+  const base = q.slice(0,5);
+  const rest = q.slice(5).sort(()=>Math.random()-0.5);
+  const must = base[Math.floor(Math.random()*base.length)];
   state.questions = [must,...rest.slice(0,8)].sort(()=>Math.random()-0.5);
-}
-
-function checkLock(){
-  lockBtn.disabled =
-    state.locked ||
-    state.answers.some(v=>!v || v.trim().length<2);
 }
 
 function render(){
@@ -212,93 +211,90 @@ function render(){
     c.innerHTML=`<div class="q">${q}</div>`;
     const inp=document.createElement("input");
     inp.className="answer";
-    inp.value=state.answers[i]||"";
+    inp.value=state.answers[i];
     inp.disabled=state.locked;
     inp.oninput=()=>{
       state.answers[i]=inp.value;
-      inp.scrollLeft = inp.scrollWidth; // ✅ Solution 2
+      inp.scrollLeft=inp.scrollWidth;
       save();
-      checkLock();
+      check();
     };
     c.appendChild(inp);
     grid.appendChild(c);
   });
-
   if(state.locked){
-    lockedBanner.classList.remove("hidden");
-    lockedTime.textContent = timeFmt(state.lockedAt);
+    locked.classList.remove("hidden");
+    time.textContent=formatTime(state.time);
   }
 }
 
-document.addEventListener("DOMContentLoaded", ()=>{
-  load();
+function check(){
+  lock.disabled = state.locked || state.answers.some(v=>!v||v.length<2);
+}
 
-  if(state.questions.length){
-    introOverlay.classList.add("hidden");
-    welcomeName.textContent = state.name + "!";
-    render();
-    if(state.locked){
-      lockBtn.classList.add("hidden");
-      adminBtn.classList.remove("hidden");
-    }
-    return;
-  }
+startBtn.onclick=()=>{
+  intro.classList.add("hidden");
+  nameBox.classList.remove("hidden");
+};
 
-  tapStartBtn.onclick = ()=>{
-    introOverlay.classList.add("hidden");
-    nameOverlay.classList.remove("hidden");
-  };
+nameOk.onclick=async()=>{
+  state.name=playerName.value.trim();
+  if(state.name.length<2) return alert("Enter your name");
+  hello.textContent=state.name+"!";
+  nameBox.classList.add("hidden");
 
-  continueBtn.onclick = async ()=>{
-    const n = participantName.value.trim();
-    if(n.length<2) return alert("Enter your name");
-    state.name=n;
-    welcomeName.textContent=n+"!";
-    nameOverlay.classList.add("hidden");
+  let n=3;
+  countdown.classList.remove("hidden");
+  count.textContent=n;
 
-    let c=3;
-    countOverlay.classList.remove("hidden");
-    countNum.textContent=c;
-
-    const i=setInterval(async ()=>{
-      c--;
-      if(c>0) countNum.textContent=c;
-      else{
-        clearInterval(i);
-        countOverlay.classList.add("hidden");
-        const q=await loadQuestions();
-        pickQuestions(q);
-        render();
-        save();
-      }
-    },1000);
-  };
-
-  lockBtn.onclick = ()=>{
-    state.locked=true;
-    state.lockedAt=new Date().toISOString();
-    save();
-    lockBtn.classList.add("hidden");
-    adminBtn.classList.remove("hidden");
-    render();
-  };
-
-  adminBtn.onclick = ()=>{
-    if(prompt("Admin passcode?")!==ADMIN) return;
-    if(confirm("OK = Unlock, Cancel = Start again")){
-      state.locked=false;
-      state.lockedAt="";
-      save();
-      adminBtn.classList.add("hidden");
-      lockBtn.classList.remove("hidden");
+  const i=setInterval(async()=>{
+    n--;
+    if(n>0) count.textContent=n;
+    else{
+      clearInterval(i);
+      countdown.classList.add("hidden");
+      let q=await loadQuestions();
+      pick(q);
       render();
-    }else{
-      localStorage.removeItem(STORAGE_KEY);
-      location.reload();
+      save();
     }
-  };
-});
-</script>
+  },1000);
+};
 
+lock.onclick=()=>{
+  state.locked=true;
+  state.time=new Date().toISOString();
+  save();
+  lock.classList.add("hidden");
+  admin.classList.remove("hidden");
+  render();
+};
+
+admin.onclick=()=>{
+  if(prompt("Admin passcode?")!==ADMIN) return;
+  if(confirm("OK = Unlock, Cancel = Start again")){
+    state.locked=false;
+    state.time="";
+    save();
+    admin.classList.add("hidden");
+    lock.classList.remove("hidden");
+    render();
+  }else{
+    localStorage.removeItem(STORAGE);
+    location.reload();
+  }
+};
+
+load();
+if(state.questions.length){
+  intro.classList.add("hidden");
+  hello.textContent=state.name+"!";
+  render();
+  if(state.locked){
+    lock.classList.add("hidden");
+    admin.classList.remove("hidden");
+  }
+}
+</script>
 </body>
 </html>

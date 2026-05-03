@@ -174,9 +174,8 @@
       qEl.className = 'q';
       qEl.textContent = q;
 
-      const input = document.createElement('input');
+      const input = document.createElement('textarea');
       input.className = 'answer';
-      input.type = 'text';
       input.maxLength = 60;
       input.placeholder = 'Type a name';
       input.value = appState.answers[idx] || '';

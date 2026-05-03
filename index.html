@@ -8,13 +8,13 @@
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
 
 <style>
-:root {
+:root{
   --brand:#7A0019;
   --fg:#0f1c2b;
   --line:#e5e7eb;
   --bg:#ffffff;
 }
-*{ box-sizing:border-box; }
+*{box-sizing:border-box}
 
 body{
   margin:0;
@@ -29,26 +29,12 @@ main{
   padding:0 14px 44px;
 }
 
-.header{ margin:10px 0 14px; }
-.logo{ height:64px; }
 .welcome{
   font-size:1.35rem;
   font-weight:900;
   color:var(--brand);
 }
 
-/* LOCKED BANNER */
-.locked-banner{
-  background:var(--brand);
-  color:#fff;
-  font-weight:900;
-  text-align:center;
-  padding:14px;
-  border-radius:14px;
-  margin:10px 0;
-}
-
-/* GRID */
 .grid{
   display:grid;
   grid-template-columns:repeat(3,1fr);
@@ -59,7 +45,7 @@ main{
   border:1px solid var(--line);
   border-radius:12px;
   padding:12px;
-  min-height:160px;
+  min-height:150px;
   background:#fff;
 }
 
@@ -68,7 +54,7 @@ main{
   margin-bottom:10px;
 }
 
-/* ✅ SOLUTION 1: better mobile input */
+/* ✅ Mobile Solution 1 */
 input.answer{
   width:100%;
   padding:8px;
@@ -82,7 +68,6 @@ input.answer:disabled{
   background:#f6f7f9;
 }
 
-/* ACTIONS */
 .actions{
   margin-top:14px;
   display:flex;
@@ -94,35 +79,35 @@ button{
   padding:12px 16px;
   border-radius:12px;
   font-weight:900;
-  cursor:pointer;
   border:none;
+  cursor:pointer;
 }
 
-.primary{
+.primary{ background:var(--brand); color:#fff; }
+.secondary{ background:#fff; border:1px solid var(--line); }
+
+.locked-banner{
   background:var(--brand);
   color:#fff;
+  font-weight:900;
+  text-align:center;
+  padding:14px;
+  border-radius:14px;
+  margin:10px 0;
 }
 
-.secondary{
-  background:#fff;
-  border:1px solid var(--line);
-}
-
-/* OVERLAYS */
 .overlay{
   position:fixed;
   inset:0;
-  background:rgba(122,0,25,0.97);
+  background:rgba(122,0,25,.97);
   display:flex;
   align-items:center;
   justify-content:center;
   z-index:1000;
-  padding:18px;
 }
 
 .panel{
   background:#fff;
-  color:#000;
   padding:22px;
   border-radius:16px;
   max-width:420px;
@@ -131,12 +116,7 @@ button{
 }
 
 .hidden{ display:none; }
-
-.count{
-  font-size:5rem;
-  font-weight:900;
-  color:#fff;
-}
+.count{ font-size:5rem; font-weight:900; color:#fff; }
 </style>
 </head>
 
@@ -151,10 +131,10 @@ button{
 <div id="nameOverlay" class="overlay hidden">
   <div class="panel">
     <h2>Welcome to the Bingo Game!</h2>
-    <p>Please enter your name. We’ll personalise your card.</p>
-    <input id="participantName" placeholder="Your name" />
+    <p>Please enter your name.</p>
+    <input id="participantName" />
     <br><br>
-    <button id="nameContinueBtn" class="primary">Continue</button>
+    <button id="continueBtn" class="primary">Continue</button>
   </div>
 </div>
 
@@ -163,22 +143,8 @@ button{
   <div id="countNum" class="count">3</div>
 </div>
 
-<!-- ADMIN CHOICE -->
-<div id="adminChoiceOverlay" class="overlay hidden">
-  <div class="panel">
-    <h2>Admin Action</h2>
-    <p>What would you like to do?</p>
-    <div style="display:flex; gap:10px; justify-content:center;">
-      <button id="choiceUnlock" class="primary">Unlock</button>
-      <button id="choiceRestart" class="secondary">Start again</button>
-    </div>
-  </div>
-</div>
-
 <main>
-  <div class="header">
-    <div class="welcome">Welcome, <span id="welcomeName"></span></div>
-  </div>
+  <div class="welcome">Welcome, <span id="welcomeName"></span></div>
 
   <div id="lockedBanner" class="locked-banner hidden">
     🔒 CARD LOCKED · <span id="lockedTime"></span>
@@ -188,16 +154,13 @@ button{
 
   <div class="actions">
     <button id="lockBtn" class="primary" disabled>Lock my card ✅</button>
-    <button id="unlockBtn" class="secondary hidden">Admin for Unlock</button>
+    <button id="adminBtn" class="secondary hidden">Admin for Unlock</button>
   </div>
 </main>
 
 <script>
-const ADMIN_PASS = "FU2026";
+const ADMIN = "FU2026";
 const STORAGE_KEY = "FU_BINGO_FINAL";
-
-/* QUESTIONS */
-const FALLBACK_QUESTIONS = [];
 
 /* STATE */
 let state = {
@@ -210,46 +173,39 @@ let state = {
 
 const $ = id => document.getElementById(id);
 
-/* TIME */
-function formatTime(iso){
-  return new Date(iso).toLocaleTimeString([],{
-    hour:'2-digit',
-    minute:'2-digit',
-    second:'2-digit'
-  });
-}
-
-/* STORAGE */
 function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
 function load(){
   const s = localStorage.getItem(STORAGE_KEY);
   if(s) state = JSON.parse(s);
 }
-function clearAll(){ localStorage.removeItem(STORAGE_KEY); }
+function timeFmt(t){
+  return new Date(t).toLocaleTimeString([],{
+    hour:'2-digit', minute:'2-digit', second:'2-digit'
+  });
+}
 
-/* QUESTIONS */
+/* LOAD QUESTIONS FROM questions.txt */
 async function loadQuestions(){
-  try{
-    const r = await fetch("questions.txt",{cache:"no-store"});
-    const t = await r.text();
-    const lines = t.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
-    return lines.length>=9 ? lines : FALLBACK_QUESTIONS;
-  }catch{
-    return FALLBACK_QUESTIONS;
-  }
+  const r = await fetch("questions.txt",{cache:"no-store"});
+  const t = await r.text();
+  return t.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
 }
 
 function pickQuestions(all){
   const first5 = all.slice(0,5);
   const rest = all.slice(5).sort(()=>Math.random()-0.5);
   const must = first5[Math.floor(Math.random()*first5.length)];
-  const nine = [must,...rest.slice(0,8)].sort(()=>Math.random()-0.5);
-  state.questions = nine;
+  state.questions = [must,...rest.slice(0,8)].sort(()=>Math.random()-0.5);
 }
 
-/* RENDER */
-function renderGrid(){
-  $("grid").innerHTML="";
+function checkLock(){
+  lockBtn.disabled =
+    state.locked ||
+    state.answers.some(v=>!v || v.trim().length<2);
+}
+
+function render(){
+  grid.innerHTML="";
   state.questions.forEach((q,i)=>{
     const c=document.createElement("div");
     c.className="cell";
@@ -258,107 +214,90 @@ function renderGrid(){
     inp.className="answer";
     inp.value=state.answers[i]||"";
     inp.disabled=state.locked;
-
-    inp.addEventListener("input",()=>{
+    inp.oninput=()=>{
       state.answers[i]=inp.value;
+      inp.scrollLeft = inp.scrollWidth; // ✅ Solution 2
       save();
       checkLock();
-
-      /* ✅ SOLUTION 2: keep cursor visible */
-      inp.scrollLeft = inp.scrollWidth;
-    });
-
+    };
     c.appendChild(inp);
-    $("grid").appendChild(c);
+    grid.appendChild(c);
   });
 
   if(state.locked){
-    $("lockedBanner").classList.remove("hidden");
-    $("lockedTime").textContent = formatTime(state.lockedAt);
+    lockedBanner.classList.remove("hidden");
+    lockedTime.textContent = timeFmt(state.lockedAt);
   }
 }
 
-function checkLock(){
-  const ok = state.answers.every(a=>a && a.trim().length>=2);
-  $("lockBtn").disabled = state.locked || !ok;
-}
+document.addEventListener("DOMContentLoaded", ()=>{
+  load();
 
-/* START */
-$("tapStartBtn").onclick=()=>{
-  $("introOverlay").classList.add("hidden");
-  $("nameOverlay").classList.remove("hidden");
-};
-
-$("nameContinueBtn").onclick=async()=>{
-  const n = $("participantName").value.trim();
-  if(n.length<2) return alert("Please enter your name.");
-  state.name=n;
-  save();
-
-  $("welcomeName").textContent=n+"!";
-  $("nameOverlay").classList.add("hidden");
-
-  let k=3;
-  $("countOverlay").classList.remove("hidden");
-  $("countNum").textContent=k;
-
-  const t=setInterval(()=>{
-    k--;
-    if(k>0){
-      $("countNum").textContent=k;
-    }else{
-      clearInterval(t);
-      $("countOverlay").classList.add("hidden");
-      loadQuestions().then(q=>{
-        pickQuestions(q);
-        renderGrid();
-      });
+  if(state.questions.length){
+    introOverlay.classList.add("hidden");
+    welcomeName.textContent = state.name + "!";
+    render();
+    if(state.locked){
+      lockBtn.classList.add("hidden");
+      adminBtn.classList.remove("hidden");
     }
-  },1000);
-};
-
-/* LOCK */
-$("lockBtn").onclick=()=>{
-  state.locked=true;
-  state.lockedAt=new Date().toISOString();
-  save();
-  $("lockBtn").classList.add("hidden");
-  $("unlockBtn").classList.remove("hidden");
-  renderGrid();
-};
-
-/* ADMIN */
-$("unlockBtn").onclick=()=>{
-  if(prompt("Admin passcode?")!==ADMIN_PASS) return alert("Wrong passcode.");
-  $("adminChoiceOverlay").classList.remove("hidden");
-};
-
-$("choiceUnlock").onclick=()=>{
-  $("adminChoiceOverlay").classList.add("hidden");
-  state.locked=false;
-  state.lockedAt="";
-  save();
-  $("lockBtn").classList.remove("hidden");
-  $("unlockBtn").classList.add("hidden");
-  renderGrid();
-};
-
-$("choiceRestart").onclick=()=>{
-  clearAll();
-  location.reload();
-};
-
-/* LOAD */
-load();
-if(state.questions.length){
-  $("introOverlay").classList.add("hidden");
-  $("welcomeName").textContent=state.name+"!";
-  renderGrid();
-  if(state.locked){
-    $("lockBtn").classList.add("hidden");
-    $("unlockBtn").classList.remove("hidden");
+    return;
   }
-}
+
+  tapStartBtn.onclick = ()=>{
+    introOverlay.classList.add("hidden");
+    nameOverlay.classList.remove("hidden");
+  };
+
+  continueBtn.onclick = async ()=>{
+    const n = participantName.value.trim();
+    if(n.length<2) return alert("Enter your name");
+    state.name=n;
+    welcomeName.textContent=n+"!";
+    nameOverlay.classList.add("hidden");
+
+    let c=3;
+    countOverlay.classList.remove("hidden");
+    countNum.textContent=c;
+
+    const i=setInterval(async ()=>{
+      c--;
+      if(c>0) countNum.textContent=c;
+      else{
+        clearInterval(i);
+        countOverlay.classList.add("hidden");
+        const q=await loadQuestions();
+        pickQuestions(q);
+        render();
+        save();
+      }
+    },1000);
+  };
+
+  lockBtn.onclick = ()=>{
+    state.locked=true;
+    state.lockedAt=new Date().toISOString();
+    save();
+    lockBtn.classList.add("hidden");
+    adminBtn.classList.remove("hidden");
+    render();
+  };
+
+  adminBtn.onclick = ()=>{
+    if(prompt("Admin passcode?")!==ADMIN) return;
+    if(confirm("OK = Unlock, Cancel = Start again")){
+      state.locked=false;
+      state.lockedAt="";
+      save();
+      adminBtn.classList.add("hidden");
+      lockBtn.classList.remove("hidden");
+      render();
+    }else{
+      localStorage.removeItem(STORAGE_KEY);
+      location.reload();
+    }
+  };
+});
 </script>
 
 </body>

@@ -14,51 +14,134 @@
     main{ max-width:980px; margin:14px auto; padding:0 14px 44px; }
 
     .header{ display:flex; flex-direction:column; align-items:flex-start; gap:8px; margin:10px 0 14px; }
-    .logo{ height:64px; width:auto; display:block; }
-    .welcome{ font-size:1.35rem; font-weight:900; color:var(--brand); }
 
-    .locked-banner{
-      background:var(--brand); color:#fff; font-size:1.45rem; font-weight:900;
-      text-align:center; padding:14px; border-radius:14px; margin:10px 0 14px;
-      letter-spacing:.06em; box-shadow:0 6px 18px rgba(0,0,0,.18);
+    .logo{
+      height:64px;
+      width:auto;
+      display:block;
     }
 
+    .welcome{ font-size:1.35rem; font-weight:900; color:var(--brand); }
+
     .grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
-    .cell{ border:1px solid var(--line); border-radius:12px; padding:12px; min-height:160px; background:#fff; display:flex; flex-direction:column; }
+
+    .cell{
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:12px;
+      min-height:160px;
+      background:#fff;
+      display:flex;
+      flex-direction:column;
+    }
+
     .q{ font-weight:900; margin-bottom:10px; }
-    input.answer{ padding:10px; border-radius:10px; border:1px dashed var(--line); }
 
-    .actions{ margin-top:14px; display:flex; gap:10px; }
-    button{ padding:12px 16px; border-radius:12px; font-weight:900; cursor:pointer; border:none; }
-    .primary{ background:var(--brand); color:#fff; }
-    .secondary{ background:#fff; border:1px solid var(--line); color:var(--fg); }
+    input.answer{
+      padding:10px;
+      border-radius:10px;
+      border:1px dashed var(--line);
+      font-size:1rem;
+    }
 
-    .overlay{ position:fixed; inset:0; background:rgba(122,0,25,.97); color:#fff;
-      display:flex; justify-content:center; align-items:center; z-index:1000; }
-    .hidden{ display:none; }
+    .actions{ margin-top:14px; }
+
+    button{
+      padding:12px 16px;
+      border-radius:12px;
+      font-weight:900;
+      font-size:1rem;
+      cursor:pointer;
+      border:none;
+      background:var(--brand);
+      color:#fff;
+    }
+
+    @media (max-width:520px){
+      .logo{ height:58px; }
+    }
   </style>
 </head>
 
 <body>
 
 <main>
+
   <div class="header">
-    <img class="logo"
-      src="ta:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAYwAAAGdCAYAAAABs0R0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAAEnQAABJ0Ad5mH3gAAMnJSURBVHhe7J11nBzHnbef6u7hWeYVg0UW2JJsWbZsmdmxnThmx0mcOHGSu1z47oJvcg7TJRcwJE7MGDOzxQwWMy/TMHR3vX/07Fo7Wu3Orla49Xw+bWunanoa61vwAyGllCgUCoVC0QNa9gcKhUKhUHSF...AAAAASUVORK5CYII="
-      alt="Puratos Finance Seminar 2026">
+
+    <!-- INLINE SVG LOGO (WORKS EVERYWHERE) -->
+    <svg class="logo"
+         viewBox="0 0 400 400"
+         xmlns="http://www.w3.org/2000/svg"
+         role="img"
+         aria-label="Puratos Finance Seminar 2026">
+
+      <circle cx="200" cy="200" r="200" fill="#C8102E"/>
+
+      <text x="200" y="85" text-anchor="middle"
+            fill="white"
+            font-size="36"
+            font-weight="700"
+            font-family="Arial, Helvetica, sans-serif">
+        puratos
+      </text>
+
+      <text x="200" y="115" text-anchor="middle"
+            fill="white"
+            font-size="14"
+            font-family="Arial, Helvetica, sans-serif">
+        Food Innovation for Good
+      </text>
+
+      <!-- star -->
+      <polygon points="125,155 132,173 151,173 135,184 141,202
+                       125,191 109,202 115,184 99,173 118,173"
+               fill="white"/>
+
+      <text x="200" y="215" text-anchor="middle"
+            fill="white"
+            font-size="64"
+            font-weight="900"
+            font-family="Arial, Helvetica, sans-serif">
+        FINANCE
+      </text>
+
+      <text x="200" y="265" text-anchor="middle"
+            fill="white"
+            font-size="36"
+            font-weight="700"
+            font-family="Arial, Helvetica, sans-serif">
+        SEMINAR
+      </text>
+
+      <text x="200" y="315" text-anchor="middle"
+            fill="white"
+            font-size="36"
+            font-weight="700"
+            font-family="Arial, Helvetica, sans-serif">
+        2026
+      </text>
+    </svg>
+
     <div class="welcome">Welcome, <span id="welcomeName"></span></div>
   </div>
 
-  <div id="grid" class="grid"></div>
+  <!-- SAMPLE GRID (your full logic can plug in here) -->
+  <div class="grid">
+    <div class="cell"><div class="q">Find someone who speaks Spanish</div><input class="answer" placeholder="Type a name"></div>
+    <div class="cell"><div class="q">Find someone who ran a marathon</div><input class="answer" placeholder="Type a name"></div>
+    <div class="cell"><div class="q">Find someone born in May</div><input class="answer" placeholder="Type a name"></div>
+  </div>
 
   <div class="actions">
-    <button id="lockBtn" class="primary">Lock my card ✅</button>
+    <button>Lock my card ✅</button>
   </div>
+
 </main>
 
 <script>
-  // Minimal sanity JS – your full logic can stay as-is
-  document.getElementById("welcomeName").textContent = "Guest!";
+  // Dummy line so you see the welcome text
+  document.getElementById("welcomeName").textContent = "Gencer!";
 </script>
 
 </body>
